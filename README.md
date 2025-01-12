@@ -35,6 +35,3 @@ We use a hefty amount of ChatGPT as reference for the commands.
 
 - image by Freepik
 
-
-
-=
