@@ -1,14 +1,13 @@
-# Use an Ubuntu base image
-FROM ubuntu:latest
+# Base image
+FROM harel316/ds7:humble
 
-# Install Python
-RUN apt-get update && apt-get install -y python3
+# Add sudo and other tools
+RUN apt-get update && apt-get install -y sudo \
+    && rm -rf /var/lib/apt/lists/*
+
 
 # Set the working directory
-WORKDIR /app
+WORKDIR /workspace
 
-# Copy your Python script into the container
-COPY app.py .
-
-# Set the default command to run the Python script
-CMD ["python3", "app.py"]
+# Default command
+CMD ["bash"]
