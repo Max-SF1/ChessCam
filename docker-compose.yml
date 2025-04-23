@@ -1,8 +1,21 @@
-version: '3.4'
 
 services:
-  projecta:
-    image: projecta
+  ds7:
     build:
       context: .
-      dockerfile: ./Dockerfile
+      dockerfile: Dockerfile
+    image: my-custom-ds7
+    container_name: ds7_container
+    runtime: nvidia
+    privileged: true
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ./:/workspace
+    devices:
+      - /dev/video0:/dev/video0
+    stdin_open: true
+    tty: true
+    restart: "no"
