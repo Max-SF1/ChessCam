@@ -11,18 +11,14 @@ services:
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ./:/workspace
-      # Mount common CUDA and NVIDIA driver directories
-      # - /usr/local/cuda:/usr/local/cuda:ro
-      # - /usr/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:ro
-      # - /usr/bin/nvidia-smi:/usr/bin/nvidia-smi:ro
-      # - /usr/bin/nvidia-container-cli:/usr/bin/nvidia-container-cli:ro
-      # - /lib/modules:/lib/modules:ro
-    # devices:
-      # - /dev/nvidia0:/dev/nvidia0
-      # - /dev/nvidiactl:/dev/nvidiactl
-      # - /dev/nvidia-uvm:/dev/nvidia-uvm
-      # - /dev/nvidia-uvm-tools:/dev/nvidia-uvm-tools
-      # - /dev/nvidia-modeset:/dev/nvidia-modeset
+      - /dev:/dev
+    devices:
+      - /dev/video0:/dev/video0
+      - /dev/video1:/dev/video1
+      - /dev/video2:/dev/video2
+      - /dev/video3:/dev/video3
+      - /dev/video4:/dev/video4
+      - /dev/video5:/dev/video5
     command: ["bash"]
     stdin_open: true
     tty: true
