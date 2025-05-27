@@ -9,7 +9,3 @@ pip install -r requirements.txt --no-cache-dir --ignore-installed
 python3 -m pip install --upgrade pip
 pip uninstall -y matplotlib
 pip install matplotlib --no-cache-dir
-
-
-
-pip install -r requirements.txt --ignore-installed
