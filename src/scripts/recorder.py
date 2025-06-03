@@ -23,7 +23,7 @@ def get_new_recording_filename():
             return path
         counter += 1
 
-def start_pipeline(record_to_bag=None, width=640, height=480, fps=30):
+def start_pipeline(record_to_bag=None, width=1280, height=720, fps=30): #1280 × 720 ?
     pipeline = rs.pipeline()
     config = rs.config()
     config.enable_stream(rs.stream.color, width, height, rs.format.bgr8, fps)

@@ -7,8 +7,8 @@ import numpy as np
 import cv2
 
 # === CONFIG ===
-bag_file = r"C:/Users/orife/Downloads/stairs.bag"
-output_dir = r"C:/Users/orife/Desktop/realsense_converter/test"
+bag_file = r"/workspace/recordings/2025-06-03_17-14-17_001.bag"
+output_dir = r"/workspace/recordings/extracted_images_from_recordings"
 os.makedirs(output_dir, exist_ok=True)
 
 # === SETUP PIPELINE ===
