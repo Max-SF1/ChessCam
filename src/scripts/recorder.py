@@ -40,7 +40,7 @@ def main():
     print("Press 's' to start/stop recording, 'q' to quit.")
 
     recording = False
-    width, height, fps = 640, 480, 30
+    width, height, fps = 1280, 720, 30
     pipeline = start_pipeline(width=width, height=height, fps=fps)
     align = rs.align(rs.stream.color)
 
@@ -94,4 +94,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()
+    
