@@ -1,21 +1,16 @@
-﻿# chessbot! 
-
-
-<p align="center">
-  <img src="./image/view-chess-pieces-with-shatter-effect.jpg" alt="Alt text" width="500">
-</p>
-
-
-
+﻿# ChessCam! using YOLO11 to generate chess suggestions based on the physical game
 
 Welcome to our README.md file, we're still kind of figuring things out as we go.
 
 *In this repository we have:*
 
-* a .gitignore file, for text we don't want git to compile if I understand correctly
-* a dockerfile, which is the recipe for creating images
-* a dockercompose, which I believe is similar to an exe but I haven't yet got too far
-* and a README markdown file - we are in it :)
+* a .gitignore file, for text we don't want git to add into our repository
+* a dockerfile that contains all the required image details
+* a docker-compose for runtime instructions
+* SCRIPTS! SO MANY SCRIPTS! recently added a script for performing inference on pieces in realtime! :D <br/>
+prior to that we exported it with ultralytics and tensorRT to optimize it for runtime. 
+* a script for training the model on our custom dataset 
+
 
 ## Setup
 
@@ -27,11 +22,6 @@ VScode extension for docker too.
 - Using ``ctrl+shift+p`` and then selecting the command ``Docker: Add Docker files to Workspace`` we get a few empty docker files.
 - linking the github account by logging into vscode, creating a git commit for the workspace
 - creating a new github repository and linking it to the local git repo.
-- we push the project to the interwebs.
+- we push the project to the internet, updating sequentially from branches to maintain a tidy work environment! 
 
 ---
-
-We use a hefty amount of ChatGPT as reference for the commands.
-
-- image by Freepik
-
