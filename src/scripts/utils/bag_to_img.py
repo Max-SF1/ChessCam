@@ -7,7 +7,7 @@ import numpy as np
 import cv2
 
 # === CONFIG ===
-bag_file = r"/workspace/recordings/2025-06-03_17-14-17_001.bag"
+bag_file = r"/workspace/recordings/2025-06-04_10-30-54_001.bag"
 output_dir = r"/workspace/recordings/extracted_images_from_recordings"
 os.makedirs(output_dir, exist_ok=True)
 

@@ -5,7 +5,7 @@ import os
 import cv2
 import matplotlib.pyplot as plt
 
-image_path = "/workspace/recordings/extracted_images_from_recordings/color_0000.png" #REPLACE WITH YOUR OWN
+image_path = "/workspace/recordings/extracted_images_from_recordings/color_0072.png" #REPLACE WITH YOUR OWN
 
 image = cv2.imread(image_path)
 
