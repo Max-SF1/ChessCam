@@ -42,7 +42,7 @@ corners = []
 #corners given by cv2's find corners are ordered row by row, left to right in every row. 
 #matching_corners should be ordered the same way.
 matching_corners_for_homography = np.array([
-    # [ [x, y] ] for y in range(8,1,-1) for x in range() #TODO finish this! find the correct coordinates! 
+     [ [x, y] ] for y in range(8,1,-1) for x in range(8,1,-1) 
 ], dtype=np.float32)
 corners_found = False #will update to true once corners have been found at least once
 homography_matrix = []
@@ -101,12 +101,16 @@ try:
 
             #change list of tuples to list of lists.
             localization_pts_reformatted = np.array([[[x, y]] for (x, y) in localization_pts], dtype=np.float32) 
-            print(f"{localization_pts=}")
-            print(homography_matrix)
             localization_pts_transformed.append(cv2.perspectiveTransform(localization_pts_reformatted, homography_matrix))
-            for point in localization_pts_transformed:
-                print("chess piece detected at:",point)
-                
+            if key == ord('l'):
+                    points_array = localization_pts_transformed[0]
+                    for point in points_array:
+                        loc_number, loc_letter = point[0]
+                        print(point)
+                        print("chess piece detected at:", int(loc_number),chr(int(loc_letter + 64)))
+        #draws the green points that indicate point-wise encapsulation of piece location  
+
+
         if draw_localization_pt:
             for point in localization_pts:
                 print(point)
