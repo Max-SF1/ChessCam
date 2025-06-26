@@ -2,8 +2,16 @@
 import os
 import cv2
 from ultralytics import YOLO 
+from ultralytics import KalmanFilterXYWH
 import pyrealsense2 as rs
 import numpy as np
+
+class Piece:
+  def __init__(self, piece_type, piece_location,proj_piece_location):
+    self.piece_type = piece_type
+    self.piece_location = piece_location
+    self.proj_piece_location = proj_piece_location
+    self.kf = KalmanFilterXYWH()
 
 
 ##### KEYS ####
@@ -35,8 +43,11 @@ config = rs.config()
 config.enable_stream(rs.stream.color, 1280, 720, rs.format.bgr8, 30)
 pipeline.start(config)
 
+
+###FLAGS###
 drawbb = False # parameter for displaying bounding boxes
 draw_localization_pt = False 
+first_localization = True 
 
 corners = []
 #corners given by cv2's find corners are ordered row by row, left to right in every row. 
@@ -46,6 +57,7 @@ matching_corners_for_homography = np.array([
 ], dtype=np.float32)
 corners_found = False #will update to true once corners have been found at least once
 homography_matrix = []
+
 try:
     while True:
         frames = pipeline.wait_for_frames()
@@ -88,12 +100,16 @@ try:
         
         # take predictions and project them into a single point for localization 
         localization_pts = []
+
         for box in results[0].boxes.xyxy.cpu():
+                class_id = int(box.cls)  # class ID (tensor to int)
+                class_name = tensorrt_model.names[class_id] #get the class string
                 bb_height = (box[1]-box[3]).numpy() # abs if it doesn't work out 
                 localization_pts.append((
                 int((box[0].numpy() + box[2].numpy()) / 2), #point x position
                 int(box[3].numpy() + bb_height * 0.25) #point y position
-        ))
+                ))
+
                 
         #compute homography 
         localization_pts_transformed = []
@@ -102,7 +118,9 @@ try:
             #change list of tuples to list of lists.
             localization_pts_reformatted = np.array([[[x, y]] for (x, y) in localization_pts], dtype=np.float32) 
             localization_pts_transformed.append(cv2.perspectiveTransform(localization_pts_reformatted, homography_matrix))
-            if key == ord('l'):
+            if key == ord('l'): #start localization: 
+                    first_localization = False 
+                    
                     points_array = localization_pts_transformed[0]
                     for point in points_array:
                         loc_number, loc_letter = point[0]
