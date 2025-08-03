@@ -2,16 +2,12 @@
 import os
 import cv2
 from ultralytics import YOLO 
-from ultralytics import KalmanFilterXYWH
+from ultralytics.trackers.utils.kalman_filter import KalmanFilterXYWH
 import pyrealsense2 as rs
 import numpy as np
+from utils.supporting_structs import Piece  #to clean up code, piece has been moved to a new file. 
 
-class Piece:
-  def __init__(self, piece_type, piece_location,proj_piece_location):
-    self.piece_type = piece_type
-    self.piece_location = piece_location
-    self.proj_piece_location = proj_piece_location
-    self.kf = KalmanFilterXYWH()
+
 
 
 ##### KEYS ####
@@ -58,6 +54,7 @@ matching_corners_for_homography = np.array([
 corners_found = False #will update to true once corners have been found at least once
 homography_matrix = []
 
+pieces = []
 try:
     while True:
         frames = pipeline.wait_for_frames()
@@ -99,42 +96,21 @@ try:
             annotated_frame = frame
         
         # take predictions and project them into a single point for localization 
-        localization_pts = []
-
-        for box in results[0].boxes.xyxy.cpu():
-                class_id = int(box.cls)  # class ID (tensor to int)
-                class_name = tensorrt_model.names[class_id] #get the class string
-                bb_height = (box[1]-box[3]).numpy() # abs if it doesn't work out 
-                localization_pts.append((
-                int((box[0].numpy() + box[2].numpy()) / 2), #point x position
-                int(box[3].numpy() + bb_height * 0.25) #point y position
-                ))
+        if key == ord('l'):
+            pieces = [] #reset the list. 
+            for bounding_box in results[0].boxes:
+                pieces.append(Piece(bounding_box,tensorrt_model))
+                        #development tip: print(bounding_box) is really cool if you want to find the attributes of a bounding box! 
+        if draw_localization_pt == True: 
+            for piece in pieces:
+                loc = piece.point_loc()
+                if draw_localization_pt:
+                    cv2.circle(annotated_frame,loc,5,(0,255,0),-1)
+                piece.point_loc_on_ideal_board(homography_matrix)
+        else: #take the detections, associate them with kalman filters, and update filter based on measurements. 
+            for bounding_box in results[0].boxes:
 
                 
-        #compute homography 
-        localization_pts_transformed = []
-        if localization_pts and isinstance(homography_matrix, np.ndarray):
-
-            #change list of tuples to list of lists.
-            localization_pts_reformatted = np.array([[[x, y]] for (x, y) in localization_pts], dtype=np.float32) 
-            localization_pts_transformed.append(cv2.perspectiveTransform(localization_pts_reformatted, homography_matrix))
-            if key == ord('l'): #start localization: 
-                    first_localization = False 
-                    
-                    points_array = localization_pts_transformed[0]
-                    for point in points_array:
-                        loc_number, loc_letter = point[0]
-                        print(point)
-                        print("chess piece detected at:", int(loc_number),chr(int(loc_letter + 64)))
-        #draws the green points that indicate point-wise encapsulation of piece location  
-
-
-        if draw_localization_pt:
-            for point in localization_pts:
-                print(point)
-                cv2.circle(annotated_frame,point,5,(0,255,0),-1)
-
-        # print(annotated_frame.shape) annotated frame is 720,1280,3 (RGB image)
         cv2.namedWindow("YOLOv11 Online Inference")
         cv2.imshow("YOLOv11 Online Inference", annotated_frame)   
 
@@ -143,15 +119,3 @@ finally:
     cv2.destroyAllWindows()
 
 
-######################### CV2 DRAWING FUNCTIONS (not used atm.) ##################################
-# mouse callback function - reference: 
-# def draw_circle(event,x,y):
-#     """draws a circle, leave me alone pylint! """
-#     if event == cv2.EVENT_LBUTTONDBLCLK:
-#         # print(f"x = {x}, y = {y} ") prints coordinates of click
-#         corners.append((x,y))
-#         if len(corners) == 5: 
-#            corners.pop(0)
-# and to call the function inside main loop we used:
-#  cv2.setMouseCallback("YOLOv11 Online Inference",draw_circle)
-##################################################################################
