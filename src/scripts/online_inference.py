@@ -2,20 +2,20 @@
 import os
 import cv2
 from ultralytics import YOLO 
-from ultralytics.trackers.utils.kalman_filter import KalmanFilterXYWH
 import pyrealsense2 as rs
 import numpy as np
-from utils.supporting_structs import Piece, PieceManager, Homography, Piece_Associator
+from utils.supporting_structs import Piece, PieceManager, Homography
 
 
 
 
 ##### KEYS ####
 # b - draws bounding box
+# l- adds pieces to the manager.
 # p - draws localization point
 # q - quits :)
-# c - to re-localize corners. 
-# remember, cv2 window has to be in focus for the program to work. 
+# c - to re-localize corners
+# remember, cv2 window has to be in focus for the program to work
 
 
 
@@ -32,7 +32,6 @@ tensorrt_model = YOLO("/workspace/src/scripts/runs/detect/train5/weights/best.en
 # # print(model.names)
 # # print(tensorrt_model.names)
 # # Initialize RealSense pipeline
-# ###############################################################################
 
 pipeline = rs.pipeline()
 config = rs.config()
@@ -47,7 +46,11 @@ first_localization = True
 
 corners = []
 manager = PieceManager([])
-homography = Homography()
+homography = Homography(homography_matrix=[[   -0.02206,   0.0090852  ,    19.368],
+                                            [-5.5634e-05  , -0.022954 ,     14.474],
+                                            [-3.8963e-05  ,  0.001556 ,   1]])
+#skip computing it by inserting your own value. (just got tired from sorting then removing pieces.)
+
 ret = False 
 
 pieces = []
@@ -60,19 +63,19 @@ try:
             continue
 
         frame = np.asanyarray(color_frame.get_data())
+        #verbose=False removes all the printing of updates to the terminal.
+        results = tensorrt_model.track(source=frame, persist=True, verbose = False, tracker = "botsort.yaml",agnostic_nms=True) 
 
-        # Run YOLO tracking on the frame
-        results = tensorrt_model.track(source=frame, persist=True, verbose = False, tracker="botsort.yaml" ) #removes all the printing of updates to the terminal.
-        #unmodified botsort tracker added 
-        manager.associate_pieces(results[-1].boxes.xywh)
-        if not homography.check_initialization(): #find corners: 
+        manager.associate_pieces(results=results)
+
+        if not homography.check_initialization(): 
             ret, corners = cv2.findChessboardCorners(frame, (7,7), None)
-            print(corners)
             if ret:
                 homography.initialized = True
         else:
-            cv2.drawChessboardCorners(frame, (7,7), corners, ret)
-            homography.compute_homography(corners)
+            # cv2.drawChessboardCorners(frame, (7,7), corners, ret)
+            if homography.homography_matrix is None: 
+                homography.compute_homography(corners)
 
 
 
@@ -96,28 +99,33 @@ try:
         if key == ord('l'):
             manager.dump_pieces()
             for bounding_box in results[0].boxes:
-                manager.append_piece(Piece(bounding_box,tensorrt_model))
+                manager.append_piece(Piece(bounding_box.xywh[0].cpu().numpy(),int(bounding_box.cls)))
                 #tip: print(bounding_box) is really cool if you want to find the attributes of a bounding box! 
+            manager.piece_scores = [0] * len(manager.pieces)
+        if manager.pieces and homography.check_initialization():  
+            manager.gamestate.initialize_board(homography=homography)
 
         manager.time_update() #time-update piece kalman filters 
-        manager.display_active_pieces()
+        manager.kill_unassociated_pieces()
+        # manager.display_active_pieces()
            
         if draw_localization_pt: 
             locations = manager.get_point_locations()
             for loc in locations: 
                 cv2.circle(annotated_frame,loc,5,(0,255,0),-1)
-
-        if manager.pieces:  
+        print(f"{len(manager.pieces)=}")
+        if manager.pieces and homography.check_initialization():  
+            manager.gamestate.initialize_board(homography=homography)
             for piece in manager.pieces: 
                 x, y, w, h = piece.mean[:4]
                 top_left = (int(x+w/2), int(y+h/2))
                 bottom_right = (int(x - w/2), int(y - h/2))
+
                 cv2.rectangle(annotated_frame, top_left, bottom_right, color=(0, 255, 0), thickness=2)
+        print(tensorrt_model.names)            
+            
 
 
-        #take the detections, associate them with kalman filters, and update filter based on measurements. 
-            # for bounding_box in results[0].boxes:
-                
                 
         cv2.namedWindow("YOLOv11 Online Inference")
         cv2.imshow("YOLOv11 Online Inference", annotated_frame)   
