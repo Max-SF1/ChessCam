@@ -4,7 +4,7 @@ import cv2
 from ultralytics import YOLO 
 import pyrealsense2 as rs
 import numpy as np
-from utils.supporting_structs import Piece, PieceManager, Homography
+from utils.supporting_structs import Piece, PieceManager, Homography, get_piece_class_mapping, fix_column_major
 
 
 
@@ -44,13 +44,13 @@ drawbb = False # parameter for displaying bounding boxes
 draw_localization_pt = False 
 first_localization = True 
 
+piece_type_dict = get_piece_class_mapping()
+
 corners = []
 manager = PieceManager([])
-homography = Homography(homography_matrix=[[   -0.02206,   0.0090852  ,    19.368],
-                                            [-5.5634e-05  , -0.022954 ,     14.474],
-                                            [-3.8963e-05  ,  0.001556 ,   1]])
+homography = Homography()
 #skip computing it by inserting your own value. (just got tired from sorting then removing pieces.)
-
+#just comment out cv2.drawchessboardcorners if you do 
 ret = False 
 
 pieces = []
@@ -72,8 +72,11 @@ try:
             ret, corners = cv2.findChessboardCorners(frame, (7,7), None)
             if ret:
                 homography.initialized = True
+                corners = fix_column_major(corners) #makes sure corners is in row_major  
+            #won't work all the time but currently works 90% of the time and that's good enough for us 
+            
         else:
-            # cv2.drawChessboardCorners(frame, (7,7), corners, ret)
+            cv2.drawChessboardCorners(frame, (7,7), corners, ret)
             if homography.homography_matrix is None: 
                 homography.compute_homography(corners)
 
@@ -84,6 +87,9 @@ try:
             drawbb = not drawbb
         elif key == ord('p'):
             draw_localization_pt = not draw_localization_pt 
+        elif key == ord('m'):
+            if manager.pieces and homography.check_initialization():  
+                manager.gamestate.initialize_board(homography=homography)
         elif key == ord('q'):
             break
         elif key == ord('c'): # if you moved the table and want to redraw the corners. 
@@ -98,12 +104,13 @@ try:
         # take predictions and project them into a single point for localization 
         if key == ord('l'):
             manager.dump_pieces()
+            print("-"*20)
             for bounding_box in results[0].boxes:
+                print("YOLO detected a ",piece_type_dict[int(bounding_box.cls)])
                 manager.append_piece(Piece(bounding_box.xywh[0].cpu().numpy(),int(bounding_box.cls)))
                 #tip: print(bounding_box) is really cool if you want to find the attributes of a bounding box! 
+            print("-"*20)
             manager.piece_scores = [0] * len(manager.pieces)
-        if manager.pieces and homography.check_initialization():  
-            manager.gamestate.initialize_board(homography=homography)
 
         manager.time_update() #time-update piece kalman filters 
         manager.kill_unassociated_pieces()
@@ -113,16 +120,13 @@ try:
             locations = manager.get_point_locations()
             for loc in locations: 
                 cv2.circle(annotated_frame,loc,5,(0,255,0),-1)
-        print(f"{len(manager.pieces)=}")
         if manager.pieces and homography.check_initialization():  
-            manager.gamestate.initialize_board(homography=homography)
             for piece in manager.pieces: 
                 x, y, w, h = piece.mean[:4]
                 top_left = (int(x+w/2), int(y+h/2))
                 bottom_right = (int(x - w/2), int(y - h/2))
 
-                cv2.rectangle(annotated_frame, top_left, bottom_right, color=(0, 255, 0), thickness=2)
-        print(tensorrt_model.names)            
+                cv2.rectangle(annotated_frame, top_left, bottom_right, color=(0, 255, 0), thickness=2)        
             
 
 
