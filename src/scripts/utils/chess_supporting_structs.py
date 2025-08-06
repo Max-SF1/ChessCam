@@ -9,7 +9,6 @@ def to_square_index(file_index, rank):
     """
     file_letter = chr(int(file_index) + 96)
     square_str = file_letter + str(int(rank))
-    print(square_str)
     return chess.parse_square(square_str)
 
 class ChessClassMapper:
@@ -56,12 +55,19 @@ class ChessClassMapper:
 class GameState():
     def __init__(self,manager):
         self.mapper = ChessClassMapper()
-        self.manager = manager
-        self.board = chess.Board.empty()  
+        self.board = chess.Board.empty() 
+        self.board.turn = False 
+        self.manager = manager 
     def initialize_board(self,homography):
         """
         Initialize_board goes over the initial detections, converts pieces to board representation and adds them to the game.
         """
+        self.board.turn = not self.board.turn
+        if self.board.turn:
+            print("White's turn")
+        else:
+            print("Black's turn")
+        self.board = chess.Board.empty()
         indices = []
         locs = self.manager.get_point_locations()
         for loc in locs: 

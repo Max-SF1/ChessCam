@@ -46,11 +46,9 @@ first_localization = True
 
 corners = []
 manager = PieceManager([])
-homography = Homography(homography_matrix=[[   -0.02206,   0.0090852  ,    19.368],
-                                            [-5.5634e-05  , -0.022954 ,     14.474],
-                                            [-3.8963e-05  ,  0.001556 ,   1]])
+homography = Homography()
 #skip computing it by inserting your own value. (just got tired from sorting then removing pieces.)
-
+#just comment out cv2.drawchessboardcorners if you do 
 ret = False 
 
 pieces = []
@@ -73,7 +71,7 @@ try:
             if ret:
                 homography.initialized = True
         else:
-            # cv2.drawChessboardCorners(frame, (7,7), corners, ret)
+            cv2.drawChessboardCorners(frame, (7,7), corners, ret)
             if homography.homography_matrix is None: 
                 homography.compute_homography(corners)
 
@@ -84,6 +82,9 @@ try:
             drawbb = not drawbb
         elif key == ord('p'):
             draw_localization_pt = not draw_localization_pt 
+        elif key == ord('m'):
+            if manager.pieces and homography.check_initialization():  
+                manager.gamestate.initialize_board(homography=homography)
         elif key == ord('q'):
             break
         elif key == ord('c'): # if you moved the table and want to redraw the corners. 
@@ -102,8 +103,6 @@ try:
                 manager.append_piece(Piece(bounding_box.xywh[0].cpu().numpy(),int(bounding_box.cls)))
                 #tip: print(bounding_box) is really cool if you want to find the attributes of a bounding box! 
             manager.piece_scores = [0] * len(manager.pieces)
-        if manager.pieces and homography.check_initialization():  
-            manager.gamestate.initialize_board(homography=homography)
 
         manager.time_update() #time-update piece kalman filters 
         manager.kill_unassociated_pieces()
@@ -113,16 +112,13 @@ try:
             locations = manager.get_point_locations()
             for loc in locations: 
                 cv2.circle(annotated_frame,loc,5,(0,255,0),-1)
-        print(f"{len(manager.pieces)=}")
         if manager.pieces and homography.check_initialization():  
-            manager.gamestate.initialize_board(homography=homography)
             for piece in manager.pieces: 
                 x, y, w, h = piece.mean[:4]
                 top_left = (int(x+w/2), int(y+h/2))
                 bottom_right = (int(x - w/2), int(y - h/2))
 
-                cv2.rectangle(annotated_frame, top_left, bottom_right, color=(0, 255, 0), thickness=2)
-        print(tensorrt_model.names)            
+                cv2.rectangle(annotated_frame, top_left, bottom_right, color=(0, 255, 0), thickness=2)        
             
 
 

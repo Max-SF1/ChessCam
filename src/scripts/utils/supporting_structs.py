@@ -229,9 +229,9 @@ class PieceAssociator():
         for p_idx in unmatched_piece_indices:
                 manager.piece_scores[p_idx] += 1
         for d_idx in unmatched_det_indices:
-                print("piece has been appended!")
+                # print("piece has been appended!")
                 manager.append_piece(Piece(results[d_idx], class_ids[d_idx]))
-                
+
 
        
 
