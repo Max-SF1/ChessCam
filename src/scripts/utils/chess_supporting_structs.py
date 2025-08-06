@@ -53,6 +53,7 @@ class ChessClassMapper:
 
 
 class GameState():
+    """ Gamestate holds the current board configuration, as well as who makes the current moves. """
     def __init__(self,manager):
         self.mapper = ChessClassMapper()
         self.board = chess.Board.empty() 
@@ -67,14 +68,23 @@ class GameState():
             print("White's turn")
         else:
             print("Black's turn")
-        self.board = chess.Board.empty()
-        indices = []
+        self.board.clear() 
+        square_indices = [] #py-chess gives every square a number
+        validity_array = []
         locs = self.manager.get_point_locations()
         for loc in locs: 
-            loc_number,loc_letter = homography.transform_point_location_to_ideal_board(loc)
-            indices.append(to_square_index(loc_letter,loc_number))
-        for piece,index in zip(self.manager.pieces,indices): 
+            loc_number,loc_letter, validity = homography.transform_point_location_to_ideal_board(loc)
+            validity_array.append(validity)
+            if validity:
+                square_indices.append(to_square_index(loc_letter,loc_number))
+            else: 
+                square_indices.append(3) #junk value just to append something.
+        for piece,sq_index,idx in zip(self.manager.pieces,square_indices,range(len(square_indices))): 
+            if validity_array[idx] is False:
+                continue #we don't want to project invalid pieces
             color, role  = self.mapper.get_color_and_piece(piece.piece_type)
             # print(color, role)
-            self.board.set_piece_at(index, chess.Piece(role, color))
+            self.board.set_piece_at(sq_index, chess.Piece(role, color))
+
+        self.manager.kill_invalid_pieces(validity_array)
         print(self.board)

@@ -4,7 +4,7 @@ import cv2
 from ultralytics import YOLO 
 import pyrealsense2 as rs
 import numpy as np
-from utils.supporting_structs import Piece, PieceManager, Homography
+from utils.supporting_structs import Piece, PieceManager, Homography, get_piece_class_mapping, fix_column_major
 
 
 
@@ -44,6 +44,8 @@ drawbb = False # parameter for displaying bounding boxes
 draw_localization_pt = False 
 first_localization = True 
 
+piece_type_dict = get_piece_class_mapping()
+
 corners = []
 manager = PieceManager([])
 homography = Homography()
@@ -70,6 +72,9 @@ try:
             ret, corners = cv2.findChessboardCorners(frame, (7,7), None)
             if ret:
                 homography.initialized = True
+                corners = fix_column_major(corners) #makes sure corners is in row_major  
+            #won't work all the time but currently works 90% of the time and that's good enough for us 
+            
         else:
             cv2.drawChessboardCorners(frame, (7,7), corners, ret)
             if homography.homography_matrix is None: 
@@ -99,9 +104,12 @@ try:
         # take predictions and project them into a single point for localization 
         if key == ord('l'):
             manager.dump_pieces()
+            print("-"*20)
             for bounding_box in results[0].boxes:
+                print("YOLO detected a ",piece_type_dict[int(bounding_box.cls)])
                 manager.append_piece(Piece(bounding_box.xywh[0].cpu().numpy(),int(bounding_box.cls)))
                 #tip: print(bounding_box) is really cool if you want to find the attributes of a bounding box! 
+            print("-"*20)
             manager.piece_scores = [0] * len(manager.pieces)
 
         manager.time_update() #time-update piece kalman filters 
