@@ -52,7 +52,7 @@ homography = Homography()
 #skip computing it by inserting your own value. (just got tired from sorting then removing pieces.)
 #just comment out cv2.drawchessboardcorners if you do 
 ret = False 
-
+print(tensorrt_model.names)
 pieces = []
 try:
     while True:
