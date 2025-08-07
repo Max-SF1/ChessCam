@@ -150,7 +150,6 @@ class Homography:
             projected  = cv2.perspectiveTransform(localization_pt_formatted, self.homography_matrix )
             loc_number, loc_letter = projected[0][0]
             #avoid out of bounds errors. 
-            print(loc_letter, loc_number)
             loc_letter, validity_l = self.out_of_bounds_correction(loc_letter)
             loc_number, validity_n = self.out_of_bounds_correction(loc_number)
             validity = validity_n and validity_l
@@ -205,7 +204,7 @@ class PieceManager():
             return     
         # Keep only those pieces and scores where score <= time_to_live
         filtered = [(p, s) for p, s, validity in zip(self.pieces, self.piece_scores, validity_array) if validity is True]
-
+        
         # Unzip filtered list back to separate lists
         if filtered:
             self.pieces, self.piece_scores = zip(*filtered)
@@ -327,25 +326,84 @@ class PieceAssociator():
                 manager.piece_scores[p_idx] += 1
                 if manager.pieces[p_idx].probation.on_probation:
                     validity_array[p_idx] = False 
+
         for d_idx in unmatched_det_indices:
-                # print("piece has been appended!")
                 manager.append_piece(Piece(results[d_idx], class_ids[d_idx]))
+                validity_array.append(True)
         manager.kill_invalid_pieces(validity_array)
 
 
 
+def get_starting_piece_config():
+    """Returns correct starting piece list. (Assuming starting configuration matches. )"""
+    pieces = []
+    #REMEMBER - white pieces start out at line 1! 
+    #black pieces start at line 8! we switched that in our training! 
+    #white 
+    pieces.append(Piece([ 492.04 ,     193.69 ,     32.286     , 57.483],9)) #pawn A2    
+    pieces.append(Piece([490.947265625, 236.0143280029297, 32.2506103515625, 57.321075439453125],9))
+    pieces.append(Piece([478.26153564453125, 280.5523986816406, 34.609222412109375, 58.4168701171875],9))
+    pieces.append(Piece([472.0580749511719, 326.43865966796875, 34.77484130859375, 58.3389892578125],9))
+    pieces.append(Piece([457.32635498046875, 378.8240966796875, 37.8228759765625, 60.405670166015625],9))
+    pieces.append(Piece([442.1803894042969, 444.9429931640625, 40.47210693359375, 60.140838623046875],9))
+    pieces.append(Piece([430.3655090332031, 508.27972412109375, 42.20294189453125, 64.1986083984375],9))
+    pieces.append(Piece([411.91961669921875, 589.76708984375, 47.849761962890625, 63.85333251953125],9)) #pawn h2
+    #row 1: A->H
+    pieces.append(Piece([427.8836364746094, 195.59469604492188, 38.1373291015625, 64.39212036132812],11)) #white rook
+    pieces.append(Piece([438.81280517578125, 190.76657104492188, 40.162384033203125, 64.35939025878906],8)) #white knight 
+    pieces.append(Piece([412.00390625, 270.9833984375, 48.0650634765625, 84.67459106445312],6)) #bishop
+    pieces.append(Piece([391.94635009765625, 305.2357177734375, 63.913726806640625, 112.49456787109375],10)) #white queen
+    pieces.append(Piece([367.4613037109375, 358.4296875, 74.74075317382812, 118.65408325195312],7)) #king 
+    pieces.append(Piece([351.88531494140625, 428.1650390625, 62.010833740234375, 87.53915405273438],6)) #bishop on F
+    pieces.append(Piece([330.9997863769531, 505.3427734375, 70.41412353515625, 72.36392211914062],8)) #knight on G
+    pieces.append(Piece([311.40338134765625, 578.0509033203125, 62.253143310546875, 76.77392578125],11)) #rook on H 
+    # row 7: A->H (black pawns )
+    pieces.append(Piece([805.421875, 184.38917541503906, 32.23785400390625, 56.99395751953125],3))
+    pieces.append(Piece([815.3522338867188, 219.61093139648438, 35.6895751953125, 62.97834777832031],3))
+    pieces.append(Piece([813.5860595703125, 269.6271667480469, 34.28558349609375, 63.8983154296875],3))
+    pieces.append(Piece([819.1581420898438, 316.21148681640625, 37.3988037109375, 64.7801513671875],3))
+    pieces.append(Piece([827.8421630859375, 375.1656188964844, 39.28369140625, 66.056640625],3))
+    pieces.append(Piece([837.0504150390625, 436.9603271484375, 38.3726806640625, 65.66122436523438],3))
+    pieces.append(Piece([842.927490234375, 507.6358642578125, 40.69158935546875, 67.13088989257812],3))
+    pieces.append(Piece([852.6665649414062, 587.1835327148438, 44.222412109375, 67.445068359375],3))
+    #row 8: A->H (black pieces)
+    pieces.append(Piece([873.6250610351562, 174.27084350585938, 35.1822509765625, 71.78117370605469],5)) #rook
+    pieces.append(Piece([880.3804931640625, 212.8873291015625, 43.18011474609375, 75.27427673339844],2)) #knight 
+    pieces.append(Piece([891.9136962890625, 253.58660888671875, 41.13653564453125, 95.294189453125],0)) #black-bishop
+    pieces.append(Piece([899.902099609375, 292.92266845703125, 55.60992431640625, 118.21830749511719],4)) #black queen 
+    pieces.append(Piece([909.0772094726562, 341.261962890625, 66.4830322265625, 133.74411010742188],1))#black king 
+    pieces.append(Piece([920.5562744140625, 422.26287841796875, 48.6607666015625, 96.96295166015625],0)) #black bishop on F8, must be F8 amirite? 
+    pieces.append(Piece([934.9600830078125, 501.88995361328125, 58.37969970703125, 80.47921752929688],2))#knight 
+    pieces.append(Piece([959.8670654296875, 591.4973754882812, 54.68408203125, 82.6297607421875],5)) #rook
 
 
 
-######################### CV2 DRAWING FUNCTIONS (not used atm.) ##################################
-# mouse callback function - reference: 
-# def draw_circle(event,x,y):
-#     """draws a circle, leave me alone pylint! """
-#     if event == cv2.EVENT_LBUTTONDBLCLK:
-#         # print(f"x = {x}, y = {y} ") prints coordinates of click
-#         corners.append((x,y))
-#         if len(corners) == 5: 
-#            corners.pop(0)
-# and to call the function inside main loop we used:
-#  cv2.setMouseCallback("YOLOv11 Online Inference",draw_circle)
-##################################################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+    return pieces 
+
+
+
+######################### CV2 DRAWING FUNCTIONS (not used atm.) ####################
+# mouse callback function - reference:                                             #
+# def draw_circle(event,x,y):                                                      #
+#     """draws a circle, leave me alone pylint! """                                #
+#     if event == cv2.EVENT_LBUTTONDBLCLK:                                         #
+#         # print(f"x = {x}, y = {y} ") prints coordinates of click                #
+#         corners.append((x,y))                                                    #
+#         if len(corners) == 5:                                                    #
+#            corners.pop(0)                                                        # 
+# and to call the function inside main loop we used:                               #
+#  cv2.setMouseCallback("YOLOv11 Online Inference",draw_circle)                    #
+################################################################################## #

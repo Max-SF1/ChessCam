@@ -4,7 +4,8 @@ import cv2
 from ultralytics import YOLO 
 import pyrealsense2 as rs
 import numpy as np
-from utils.supporting_structs import Piece, PieceManager, Homography, get_piece_class_mapping, fix_column_major
+from utils.supporting_structs import Piece, PieceManager, get_starting_piece_config 
+from utils.supporting_structs import Homography, get_piece_class_mapping, fix_column_major
 
 
 
@@ -52,7 +53,7 @@ homography = Homography()
 #skip computing it by inserting your own value. (just got tired from sorting then removing pieces.)
 #just comment out cv2.drawchessboardcorners if you do 
 ret = False 
-
+print(tensorrt_model.names)
 pieces = []
 try:
     while True:
@@ -61,7 +62,11 @@ try:
         
         if not color_frame:
             continue
-
+        
+        manager.time_update() #time-update piece kalman filters 
+        manager.kill_unassociated_pieces()
+        # manager.display_active_pieces()
+        
         frame = np.asanyarray(color_frame.get_data())
         #verbose=False removes all the printing of updates to the terminal.
         results = tensorrt_model.track(source=frame, persist=True, verbose = False, tracker = "botsort.yaml",agnostic_nms=True) 
@@ -76,7 +81,7 @@ try:
             #won't work all the time but currently works 90% of the time and that's good enough for us 
             
         else:
-            cv2.drawChessboardCorners(frame, (7,7), corners, ret)
+            # cv2.drawChessboardCorners(frame, (7,7), corners, ret)
             if homography.homography_matrix is None: 
                 homography.compute_homography(corners)
 
@@ -104,17 +109,19 @@ try:
         # take predictions and project them into a single point for localization 
         if key == ord('l'):
             manager.dump_pieces()
+            manager.pieces = get_starting_piece_config()
             print("-"*20)
             for bounding_box in results[0].boxes:
-                print("YOLO detected a ",piece_type_dict[int(bounding_box.cls)])
+                print("YOLO detected a", piece_type_dict[int(bounding_box.cls)], "with id:", bounding_box.cls)
+
+                coords = bounding_box.xywh[0].cpu().numpy().tolist()
+                print(', '.join(str(x) for x in coords))
+
                 manager.append_piece(Piece(bounding_box.xywh[0].cpu().numpy(),int(bounding_box.cls)))
                 #tip: print(bounding_box) is really cool if you want to find the attributes of a bounding box! 
             print("-"*20)
             manager.piece_scores = [0] * len(manager.pieces)
 
-        manager.time_update() #time-update piece kalman filters 
-        manager.kill_unassociated_pieces()
-        # manager.display_active_pieces()
            
         if draw_localization_pt: 
             locations = manager.get_point_locations()
