@@ -54,15 +54,26 @@ homography = Homography()
 ret = False 
 print(tensorrt_model.names)
 pieces = []
+pipeline = rs.pipeline()
+config = rs.config()
+config.enable_stream(rs.stream.color, 1280, 720, rs.format.bgr8, 30)
+config.enable_stream(rs.stream.depth, 1280, 720, rs.format.z16, 30)
+pipeline.start(config)
 try:
-    while True:
+   while True:
+       
         frames = pipeline.wait_for_frames()
         color_frame = frames.get_color_frame()
-        
-        if not color_frame:
-            continue
+        depth_frame = frames.get_depth_frame()
 
+        if not depth_frame or not color_frame:
+            continue  # skip this frame if either is missing
+
+        # Safe to access frame data now
+        depth_image = np.asanyarray(depth_frame.get_data())
         frame = np.asanyarray(color_frame.get_data())
+        depth_colormap = cv2.convertScaleAbs(depth_image, alpha=0.03)
+        
         #verbose=False removes all the printing of updates to the terminal.
         results = tensorrt_model.track(source=frame, persist=True, verbose = False, tracker = "botsort.yaml",agnostic_nms=True) 
 
@@ -76,7 +87,7 @@ try:
             #won't work all the time but currently works 90% of the time and that's good enough for us 
             
         else:
-            cv2.drawChessboardCorners(frame, (7,7), corners, ret)
+            #cv2.drawChessboardCorners(frame, (7,7), corners, ret)
             if homography.homography_matrix is None: 
                 homography.compute_homography(corners)
 
@@ -105,9 +116,8 @@ try:
         if key == ord('l'):
             manager.dump_pieces()
             print("-"*20)
-            for bounding_box in results[0].boxes:
-                print("YOLO detected a ",piece_type_dict[int(bounding_box.cls)])
-                manager.append_piece(Piece(bounding_box.xywh[0].cpu().numpy(),int(bounding_box.cls)))
+            print("YOLO detected a ",piece_type_dict[int(bounding_box.cls)])
+            manager.append_piece(Piece(bounding_box.xywh[0].cpu().numpy(),int(bounding_box.cls)))
                 #tip: print(bounding_box) is really cool if you want to find the attributes of a bounding box! 
             print("-"*20)
             manager.piece_scores = [0] * len(manager.pieces)
@@ -127,10 +137,11 @@ try:
                 bottom_right = (int(x - w/2), int(y - h/2))
 
                 cv2.rectangle(annotated_frame, top_left, bottom_right, color=(0, 255, 0), thickness=2)        
-            
+       
                 
         cv2.namedWindow("YOLOv11 Online Inference")
-        cv2.imshow("YOLOv11 Online Inference", annotated_frame)   
+        cv2.imshow("YOLOv11 Online Inference", annotated_frame)
+        cv2.imshow("Depth Stream", depth_colormap)
 
 finally:
     pipeline.stop()

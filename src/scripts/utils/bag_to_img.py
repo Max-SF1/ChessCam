@@ -5,126 +5,45 @@ import os
 import pyrealsense2 as rs
 import numpy as np
 import cv2
+from datetime import datetime
 
-# === CONFIG ===
-bag_file = r"/workspace/recordings/2025-06-04_10-30-54_001.bag"
-output_dir = r"/workspace/recordings/extracted_images_from_recordings"
-os.makedirs(output_dir, exist_ok=True)
+# ===== CONFIGURATION =====
+bag_file = "recordings/2025-08-09_18-03-57_001.bag"  # Path to your .bag file
+output_folder = "my_chess_images"              # Folder to save images
+save_every_n_frames = 240                         # Change this to save fewer/more frames
 
-# === SETUP PIPELINE ===
+# ===== CREATE OUTPUT FOLDER =====
+timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+output_path = os.path.join(output_folder, timestamp)
+os.makedirs(output_path, exist_ok=True)
+
+# ===== SETUP PIPELINE =====
 pipeline = rs.pipeline()
 config = rs.config()
+rs.config.enable_device_from_file(config, bag_file, repeat_playback=False)
+config.enable_stream(rs.stream.color, 1280, 720, rs.format.bgr8, 30)
 
-# Enable device from file
-config.enable_device_from_file(bag_file, repeat_playback=False)
+pipeline.start(config)
 
-# Try to determine available streams first
+frame_count = 0
+saved_count = 0
+
 try:
-    # Start with a basic config to see what's available
-    profile = pipeline.start(config)
-    
-    # Get the device from the pipeline
-    device = profile.get_device()
-    playback = device.as_playback()
-    playback.set_real_time(False)  # Process as fast as possible
-    
-    print("Successfully started pipeline")
-    
-    i = 0
-    try:
-        while True:
-            # Wait for frames with timeout
-            frames = pipeline.wait_for_frames(timeout_ms=1000)
-            
-            # Get color and depth frames if available
-            color_frame = frames.get_color_frame()
-            depth_frame = frames.get_depth_frame()
-            
-            # Process color frame
-            if color_frame and (i%24==0): #FRAME CONTROL 
-                color_image = np.asanyarray(color_frame.get_data())
-                cv2.imwrite(os.path.join(output_dir, f"color_{i:04d}.png"), color_image)
-                print(f"Saved color frame {i}")
-            
-            # # Process depth frame
-            # if depth_frame:
-            #     depth_image = np.asanyarray(depth_frame.get_data())
-            #     # Convert depth to 8-bit for better visualization (optional)
-            #     depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
-            #     cv2.imwrite(os.path.join(output_dir, f"depth_{i:04d}.png"), depth_image)
-            #     cv2.imwrite(os.path.join(output_dir, f"depth_colormap_{i:04d}.png"), depth_colormap)
-            #     print(f"Saved depth frame {i}")
-            
-            if color_frame or depth_frame:
-                i += 1
-                
-    except RuntimeError as e:
-        print("End of bag file reached or error:", e)
-    
-    finally:
-        pipeline.stop()
+    while True:
+        frames = pipeline.wait_for_frames()
+        color_frame = frames.get_color_frame()
+        if not color_frame:
+            continue
 
-except RuntimeError as e:
-    print(f"Failed to start pipeline: {e}")
-    
-    # Alternative approach: Try without specifying stream formats
-    print("Trying alternative approach...")
-    
-    pipeline = rs.pipeline()
-    config = rs.config()
-    config.enable_device_from_file(bag_file, repeat_playback=False)
-    
-    try:
-        profile = pipeline.start(config)
-        device = profile.get_device()
-        playback = device.as_playback()
-        playback.set_real_time(False)
-        
-        i = 0
-        while True:
-            try:
-                frames = pipeline.wait_for_frames(timeout_ms=1000)
-                
-                # Try to get any available frames
-                for frame in frames:
-                    if frame.is_color_frame() and (i %24==0):
-                        color_image = np.asanyarray(frame.get_data())
-                        cv2.imwrite(os.path.join(output_dir, f"color_{i:04d}.png"), color_image)
-                        print(f"Saved color frame {i}")
-                    # elif frame.is_depth_frame():
-                    #     depth_image = np.asanyarray(frame.get_data())
-                    #     cv2.imwrite(os.path.join(output_dir, f"depth_{i:04d}.png"), depth_image)
-                    #     print(f"Saved depth frame {i}")
-                
-                i += 1
-                
-            except RuntimeError:
-                print("End of bag file reached")
-                break
-                
-        pipeline.stop()
-        
-    except Exception as e:
-        print(f"Alternative approach also failed: {e}")
-        
-        # Final fallback: inspect bag file contents
-        print("\nInspecting bag file contents...")
-        try:
-            pipeline = rs.pipeline()
-            config = rs.config()
-            config.enable_device_from_file(bag_file)
-            
-            profile = pipeline.start(config)
-            device = profile.get_device()
-            
-            print("Available streams in bag file:")
-            for sensor in device.sensors:
-                for stream_profile in sensor.stream_profiles:
-                    print(f"  {stream_profile}")
-                    
-            pipeline.stop()
-            
-        except Exception as inspect_error:
-            print(f"Could not inspect bag file: {inspect_error}")
-
-print("Processing complete!")
+        frame_count += 1
+        if frame_count % save_every_n_frames == 0:
+            color_image = np.asanyarray(color_frame.get_data())
+            filename = os.path.join(output_path, f"frame_{saved_count:06}.png")
+            cv2.imwrite(filename, color_image)
+            saved_count += 1
+            print(f"[INFO] Saved: {filename}")
+except Exception as e:
+    print("[INFO] Done reading .bag file or error occurred:", e)
+finally:
+    pipeline.stop()
+    print(f"[INFO] Extracted {saved_count} images to: {output_path}")
