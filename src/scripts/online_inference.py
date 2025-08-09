@@ -128,8 +128,6 @@ try:
 
                 cv2.rectangle(annotated_frame, top_left, bottom_right, color=(0, 255, 0), thickness=2)        
             
-
-
                 
         cv2.namedWindow("YOLOv11 Online Inference")
         cv2.imshow("YOLOv11 Online Inference", annotated_frame)   
