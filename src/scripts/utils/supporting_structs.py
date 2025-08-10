@@ -285,7 +285,7 @@ class PieceAssociator():
     def __init__(self):
         pass
 
-    def associate(self,  manager: PieceManager, results: List[np.ndarray], class_ids,  c_threshold = 20) -> None: #used to be 40.23 something 
+    def associate(self,  manager: PieceManager, results: List[np.ndarray], class_ids,  c_threshold = 5) -> None: #used to be 40.23 something 
         """Associates between the detections and the trackable objects. """
         #### edge cases #### 
         if not manager.pieces:

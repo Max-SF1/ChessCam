@@ -79,6 +79,7 @@ class PieceTracker:
                 self.next_white_piece_squares.add(square_index)
             if color == chess.BLACK:
                 self.next_white_piece_squares.add(square_index)
+
     def discern_movement_type(self):
         ###NEED TO ADD PROMOTION LOGIC. 
         """based on set size-comparisons, discern the move type that just occured."""
@@ -109,8 +110,21 @@ class PieceTracker:
         
         if black_same and not white_same:
             print("black ate white")
+            (from_square,) = self.curr_black_piece_squares - self.next_black_piece_squares
+            (to_square,) = self.next_black_piece_squares - self.curr_black_piece_squares
+
+            # Optional sanity check:
+            if to_square in self.curr_white_piece_squares:
+                print("Confirmed: black captured a white piece at", to_square)
+
         if white_same and not black_same:
             print("white ate black")
+            (from_square,) = self.curr_white_piece_squares - self.next_white_piece_squares
+            (to_square,) = self.next_white_piece_squares - self.curr_white_piece_squares
+
+            # Optional sanity check
+            if to_square in self.curr_black_piece_squares:
+                print("Confirmed: white captured a black piece at", to_square)
         return move 
 
 
