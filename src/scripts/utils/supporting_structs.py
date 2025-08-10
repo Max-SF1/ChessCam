@@ -252,8 +252,6 @@ class PieceManager():
 
     def get_point_locations(self):
         """Returns "center of mass" point for all the pieces. """
-        if not self.pieces:
-            print("pieces empty :( inside get_point_locations()")
         locations = []
         for piece in self.pieces:
             x,y,w,h = piece.mean[:4] #the x,y,w,h coordinates of the predicted bounding box. 
@@ -295,9 +293,7 @@ class PieceAssociator():
                 manager.append_piece(Piece(results[r_idx], class_ids[r_idx]))
             return
 
-        print(f"{results=}")
         if not results:
-            print("no results!")
             # No detections, so treat all current pieces as unmatched
             validity_array = [True] * len(manager.piece_scores)
             for p_idx, piece in enumerate(manager.pieces):
@@ -317,18 +313,15 @@ class PieceAssociator():
                 int(y + h * 0.25)    # 25% above the bottom edge
             ]
             reduced_res.append(result_center_of_mass)
+            
         detection_positions = np.array(reduced_res)
         cost_matrix = cdist(piece_positions, detection_positions)
-        # print(f"{cost_matrix=}")
-        # Hungarian matching
         piece_indices, det_indices = linear_sum_assignment(cost_matrix)
         matched_piece_indices = set()
         matched_det_indices = set()
         validity_array = [True] * len(manager.piece_scores)
         all_piece_indices = set(range(cost_matrix.shape[0]))
         all_det_indices = set(range(cost_matrix.shape[1]))
-        print(f"cost matrix = {cost_matrix}")
-        # Update each matched piece with corresponding detection
         for p_idx, d_idx in zip(piece_indices, det_indices):
             if cost_matrix[p_idx,d_idx] < c_threshold:
                 matched_piece_indices.add(p_idx)
@@ -342,13 +335,10 @@ class PieceAssociator():
         # print(f"{len(manager.pieces)=}")
         # print("-"*30)
         for p_idx in unmatched_piece_indices:
-                print("I entered the unmatched pieces for!")
                 manager.piece_scores[p_idx] += 1
                 if manager.pieces[p_idx].probation.on_probation:
                     validity_array[p_idx] = False
         for d_idx in unmatched_det_indices:
-                print("I entered the unmatched det for!")
-                # print("piece has been appended!")
                 manager.append_piece(Piece(results[d_idx], class_ids[d_idx]))
                 validity_array.append(True) #new valid piece has been introduced.
         manager.kill_invalid_pieces(validity_array)
