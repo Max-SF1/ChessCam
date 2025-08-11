@@ -4,9 +4,11 @@ import chess.engine
 
 def Stockfish_advice(board):
     """Generate Stockfish Recommendations based on the current board."""
-    with chess.engine.SimpleEngine.popen_uci("stockfish") as engine:
-        result = engine.play(board, chess.engine.Limit(time=0.1))
+    with chess.engine.SimpleEngine.popen_uci("/workspace/stockfish") as engine: 
+        result = engine.play(board, chess.engine.Limit(time=0.4))
         print("Best move according to stockfish:", result.move)
+
+
 
 def to_square_index(file_index, rank):
     """
