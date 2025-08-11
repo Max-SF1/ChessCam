@@ -26,7 +26,7 @@ from utils.supporting_structs import Piece, PieceManager, Homography, get_piece_
 #              data= "/workspace/src/scripts/datasets/Scacchi-MachineLearning-YoloV5-2/data.yaml") 
 # ##############################################################################
 
-tensorrt_model = YOLO("/workspace/src/scripts/runs/detect/train5/weights/best.engine")
+tensorrt_model = YOLO("/workspace/src/scripts/runs/detect/train10/weights/best.engine")
 
 # ############ DEBUG: CHECK LOADED AND EXPORTED MODEL CLASSES: ###################
 # # print(model.names)

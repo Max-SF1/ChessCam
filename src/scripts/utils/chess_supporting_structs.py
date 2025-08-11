@@ -8,7 +8,7 @@ def to_square_index(file_index, rank):
     returns: square index for python-chess
     """
     print(f"{file_index=}, {rank=}")
-    file_index = 9-int(file_index)
+    file_index = 9-int(file_index) #9 - int() on both? 
     rank = 9-int(rank) 
     file_letter = chr(int(file_index) + 96)
     square_str = file_letter + str(int(rank))
@@ -45,9 +45,9 @@ class ChessClassMapper:
         if class_str not in self.mapping:
             raise KeyError(f"Unknown class string: {class_str}")
         return self.mapping[class_str]
-    def reverse_map_color_and_piece(self, color, type):
+    def reverse_map_color_and_piece(self, color, role):
         """returns Piece type string from color and type"""
-        return self.reverse_mapping[(color,type)]
+        return self.reverse_mapping[(color,role)]
 
 
 class PieceTracker: 
@@ -67,18 +67,19 @@ class PieceTracker:
         self.curr_white_piece_squares = self.next_white_piece_squares
         self.next_white_piece_squares = set()
         self.next_black_piece_squares = set()
-    def add_square_idx_to_appropriate_set(self, color, square_index,first_move):
-        """Adds a valid piece's square index to the appropriate color set. """
+    def add_square_idx_to_appropriate_set(self, color, square_index, first_move):
+        """Adds a square index to either black or white sets based on the color of the piece."""
         if first_move: 
             if color == chess.WHITE:
                 self.curr_white_piece_squares.add(square_index)
             if color == chess.BLACK:
-                self.curr_white_piece_squares.add(square_index)
+                self.curr_black_piece_squares.add(square_index)
         else: 
             if color == chess.WHITE:
                 self.next_white_piece_squares.add(square_index)
             if color == chess.BLACK:
-                self.next_white_piece_squares.add(square_index)
+                self.next_black_piece_squares.add(square_index)  
+
 
     def discern_movement_type(self):
         ###NEED TO ADD PROMOTION LOGIC. 
@@ -86,6 +87,8 @@ class PieceTracker:
         move = chess.Move.null()
         black_same = False
         white_same = False
+        print(f"{self.curr_white_piece_squares=}, {self.next_white_piece_squares=}")
+        print(f"{self.curr_black_piece_squares=}, {self.next_black_piece_squares=}")
         if len(self.curr_black_piece_squares) == len(self.next_black_piece_squares):
             black_same = True 
         if len(self.curr_white_piece_squares) == len(self.next_white_piece_squares):
@@ -99,7 +102,6 @@ class PieceTracker:
                 move = chess.Move(from_square, to_square)
                 print("white moved from", self.curr_white_piece_squares - self.next_white_piece_squares,
                     "to", self.next_white_piece_squares - self.curr_white_piece_squares)
-
             if self.curr_white_piece_squares == self.next_white_piece_squares:
                 #the pieces that changed were Black's
                 (from_square,) = self.curr_black_piece_squares - self.next_black_piece_squares
@@ -107,25 +109,26 @@ class PieceTracker:
                 move = chess.Move(from_square, to_square) 
                 print("black moved from", self.curr_black_piece_squares - self.next_black_piece_squares,
                     "to", self.next_black_piece_squares - self.curr_black_piece_squares)
-        
-        if black_same and not white_same:
+            
+        elif black_same and not white_same:
             print("black ate white")
             (from_square,) = self.curr_black_piece_squares - self.next_black_piece_squares
             (to_square,) = self.next_black_piece_squares - self.curr_black_piece_squares
-
+            move = chess.Move(from_square, to_square)
             # Optional sanity check:
             if to_square in self.curr_white_piece_squares:
                 print("Confirmed: black captured a white piece at", to_square)
 
-        if white_same and not black_same:
+        elif white_same and not black_same:
             print("white ate black")
             (from_square,) = self.curr_white_piece_squares - self.next_white_piece_squares
             (to_square,) = self.next_white_piece_squares - self.curr_white_piece_squares
-
+            move = chess.Move(from_square, to_square)
             # Optional sanity check
             if to_square in self.curr_black_piece_squares:
                 print("Confirmed: white captured a black piece at", to_square)
-        return move 
+        print(move)
+        return move
 
 
 class GameState():
@@ -146,61 +149,60 @@ class GameState():
         py_chess_piece_object = self.true_board.piece_at(sq_index) #get the pychess piece object, extract attributes for our own piece object.
         piece.piece_type = self.mapper.reverse_map_color_and_piece(py_chess_piece_object.color,py_chess_piece_object.piece_type)
 
-    def initialize_board(self,homography):
-        """
-        Initialize_board goes over the initial detections, converts pieces to board representation and adds them to the game.
-        """
-        print("called initialize")
-        if self.first_move is True: 
+    def initialize_board(self, homography):
+        locs = self.manager.get_point_locations()
+        square_indices = []
+        validity_array = []
+
+        # Process locations once
+        for loc in locs:
+            loc_number, loc_letter, validity = homography.transform_point_location_to_ideal_board(loc)
+            validity_array.append(validity)
+            if validity:
+                loc_letter, loc_number = int(loc_letter), int(loc_number)
+                square_indices.append(to_square_index(loc_letter, loc_number))
+            else:
+                square_indices.append(None)  # Use None for invalid
+
+        if self.first_move:
+            print("first_move is true")
             self.board.turn = chess.WHITE
-            self.board.clear() 
-            square_indices = [] #py-chess gives every square a number
-            validity_array = []
-            locs = self.manager.get_point_locations()
-            for loc in locs: 
-                loc_number,loc_letter, validity = homography.transform_point_location_to_ideal_board(loc)
-                validity_array.append(validity)
-                if validity:
-                    loc_letter, loc_number = int(loc_letter),int(loc_number)
-                    #fixing the orientation
-                    square_indices.append(to_square_index(loc_letter,loc_number))
-                else: 
-                    square_indices.append(3) #junk value just to append something.
-            for piece,sq_index,idx in zip(self.manager.pieces,square_indices,range(len(square_indices))): 
-                if validity_array[idx] is False:
-                    continue #we don't want to project invalid pieces
-                if self.first_move is True:
-                    print(locs[idx],)
-                    self.set_true_piece_type(piece, sq_index)
-                color, role  = self.mapper.get_color_and_piece(piece.piece_type)
-                self.tracker.add_square_idx_to_appropriate_set(color=color,square_index=sq_index, first_move=self.first_move)
+            self.board.clear()
+
+            # Initialize board and current sets
+            for piece, sq_index, idx in zip(self.manager.pieces, square_indices, range(len(square_indices))):
+                if validity_array[idx] is False or sq_index is None:
+                    continue
+                print(locs[idx])
+                self.set_true_piece_type(piece, sq_index)
+                color, role = self.mapper.get_color_and_piece(piece.piece_type)
+                self.tracker.add_square_idx_to_appropriate_set(
+                    color=color, square_index=sq_index, first_move=True
+                )
                 self.board.set_piece_at(sq_index, chess.Piece(role, color))
+
             self.manager.kill_invalid_pieces(validity_array)
             self.first_move = False
-        else:
-            square_indices = [] #py-chess gives every square a number
-            validity_array = []
-            locs = self.manager.get_point_locations()
-            for loc in locs: 
-                loc_number,loc_letter, validity = homography.transform_point_location_to_ideal_board(loc)
-                validity_array.append(validity)
-                if validity:
-                    loc_letter, loc_number = int(loc_letter),int(loc_number) 
-                    #fixing the orientation
-                    square_indices.append(to_square_index(loc_letter,loc_number))
-                else: 
-                    square_indices.append(3) #junk value just to append something.
-            for piece,sq_index,idx in zip(self.manager.pieces,square_indices,range(len(square_indices))):
-                if validity_array[idx] is False:
-                    continue #we don't want to project invalid pieces
-                print(locs[idx])
-                color, role  = self.mapper.get_color_and_piece(piece.piece_type)
-                self.tracker.add_square_idx_to_appropriate_set(color=color,square_index=sq_index, first_move=self.first_move)
 
+        else:
+            # Subsequent moves: fill next sets (board state after move)
+            for piece, sq_index, idx in zip(self.manager.pieces, square_indices, range(len(square_indices))):
+                if validity_array[idx] is False or sq_index is None:
+                    continue
+                color, role = self.mapper.get_color_and_piece(piece.piece_type)
+                print(f"{color=}, {role=}")
+                self.tracker.add_square_idx_to_appropriate_set(
+                    color=color, square_index=sq_index, first_move=False
+                )
+
+            # Determine move from changes in sets
             move = self.tracker.discern_movement_type()
-            self.board.push(move=move)
-            self.tracker.update_sets()          
+            if move and move != chess.Move.null():
+                self.board.push(move)
+
+            
+            # Now update sets: next sets become current for next iteration
+            self.tracker.update_sets()
             self.manager.kill_invalid_pieces(validity_array)
 
-        #note: board won't update for now. 
         print(self.board)
