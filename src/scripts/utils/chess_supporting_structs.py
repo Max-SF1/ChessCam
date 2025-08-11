@@ -1,5 +1,12 @@
 import chess
+import chess.engine
 
+
+def Stockfish_advice(board):
+    """Generate Stockfish Recommendations based on the current board."""
+    with chess.engine.SimpleEngine.popen_uci("stockfish") as engine:
+        result = engine.play(board, chess.engine.Limit(time=0.1))
+        print("Best move according to stockfish:", result.move)
 
 def to_square_index(file_index, rank):
     """
@@ -204,5 +211,6 @@ class GameState():
             # Now update sets: next sets become current for next iteration
             self.tracker.update_sets()
             self.manager.kill_invalid_pieces(validity_array)
+            Stockfish_advice(board=self.board)
 
         print(self.board)
