@@ -8,8 +8,6 @@ from utils import chess_supporting_structs
 #corners given by cv2's find corners are ordered row by row, left to right in every row. 
 #matching_corners should be ordered the same way.
 
-import numpy as np
-
 
 class Probation:
     """
@@ -121,6 +119,7 @@ class Homography:
     def check_initialization(self):
         """returns True if the Homography matrix has been computed, and false otherwise."""
         return self.initialized
+    
     def compute_homography(self,corners):
         """Computes the matrix H using cv2's FindHomography, given the corners found by FindChessboardCorners."""
         # cv2.drawChessboardCorners(frame, (7,7), corners, ret)
@@ -170,7 +169,7 @@ class Piece:
         self.mean, self.covariance = self.kf.initiate(measurement)
 
     def display(self):
-        """displays piece attributes"""
+        """Displays piece attributes"""
         print(f"{self.piece_type}, loc: {self.mean}")
     
     def time_update(self):
@@ -240,9 +239,11 @@ class PieceManager():
     def append_piece(self,piece):
         self.pieces.append(piece)
         self.piece_scores.append(0)
+
     def time_update(self):
         for piece in self.pieces:
             piece.time_update()
+
     def display_active_pieces(self):
         if not self.pieces:
             print("manager does not handle any pieces.")
@@ -252,8 +253,6 @@ class PieceManager():
 
     def get_point_locations(self):
         """Returns "center of mass" point for all the pieces. """
-        if not self.pieces:
-            print("pieces empty :( inside get_point_locations()")
         locations = []
         for piece in self.pieces:
             x,y,w,h = piece.mean[:4] #the x,y,w,h coordinates of the predicted bounding box. 
@@ -280,8 +279,6 @@ class PieceManager():
         results_bbox = results[-1].boxes.xywh
         class_ids = results[-1].boxes.cls
         res = results_bbox.cpu().numpy().tolist()
-        if not self.pieces or len(res) == 0: #if there are no pieces to associate or if there are no detections to associate.
-            return       
         self.associator.associate(self,res, class_ids)
 
 class PieceAssociator():
@@ -289,9 +286,22 @@ class PieceAssociator():
     def __init__(self):
         pass
 
-    def associate(self,  manager: PieceManager, results: List[np.ndarray], class_ids,  c_threshold = 40.023) -> None:
+    def associate(self,  manager: PieceManager, results: List[np.ndarray], class_ids,  c_threshold = 5) -> None: #used to be 40.23 something 
         """Associates between the detections and the trackable objects. """
-        if not manager.pieces or not results:
+        #### edge cases #### 
+        if not manager.pieces:
+            for r_idx, result in enumerate(results):
+                manager.append_piece(Piece(results[r_idx], class_ids[r_idx]))
+            return
+
+        if not results:
+            # No detections, so treat all current pieces as unmatched
+            validity_array = [True] * len(manager.piece_scores)
+            for p_idx, piece in enumerate(manager.pieces):
+                manager.piece_scores[p_idx] += 1
+                if piece.probation.on_probation:
+                    validity_array[p_idx] = False
+            manager.kill_invalid_pieces(validity_array)
             return
 
         # Extract piece states (e.g. [x, y])
@@ -304,32 +314,34 @@ class PieceAssociator():
                 int(y + h * 0.25)    # 25% above the bottom edge
             ]
             reduced_res.append(result_center_of_mass)
+            
         detection_positions = np.array(reduced_res)
         cost_matrix = cdist(piece_positions, detection_positions)
-        # Hungarian matching
         piece_indices, det_indices = linear_sum_assignment(cost_matrix)
         matched_piece_indices = set()
         matched_det_indices = set()
         validity_array = [True] * len(manager.piece_scores)
         all_piece_indices = set(range(cost_matrix.shape[0]))
         all_det_indices = set(range(cost_matrix.shape[1]))
-        # Update each matched piece with corresponding detection
         for p_idx, d_idx in zip(piece_indices, det_indices):
             if cost_matrix[p_idx,d_idx] < c_threshold:
                 matched_piece_indices.add(p_idx)
                 matched_det_indices.add(d_idx)
                 manager.pieces[p_idx].measurement_update(results[d_idx])
                 manager.piece_scores[p_idx] = 0 #we had a detection, we can zero out the score.
-        
         unmatched_piece_indices = all_piece_indices - matched_piece_indices
         unmatched_det_indices = all_det_indices - matched_det_indices
+        # print("-"*30)
+        # print(f"{matched_piece_indices=}, {unmatched_det_indices=}, {unmatched_piece_indices=}")
+        # print(f"{len(manager.pieces)=}")
+        # print("-"*30)
         for p_idx in unmatched_piece_indices:
                 manager.piece_scores[p_idx] += 1
                 if manager.pieces[p_idx].probation.on_probation:
-                    validity_array[p_idx] = False 
+                    validity_array[p_idx] = False
         for d_idx in unmatched_det_indices:
-                # print("piece has been appended!")
                 manager.append_piece(Piece(results[d_idx], class_ids[d_idx]))
+                validity_array.append(True) #new valid piece has been introduced.
         manager.kill_invalid_pieces(validity_array)
 
 

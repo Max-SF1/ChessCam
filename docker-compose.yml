@@ -9,6 +9,7 @@ services:
       - NVIDIA_DRIVER_CAPABILITIES=all
       - DISPLAY=${DISPLAY}
     volumes:
+      - /usr/bin/stockfish:/usr/local/bin/stockfish:ro
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ./:/workspace
       - /dev:/dev

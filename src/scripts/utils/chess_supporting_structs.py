@@ -1,4 +1,22 @@
 import chess
+import chess.engine
+
+
+
+def Stockfish_advice(board):
+    """Generate Stockfish recommendations safely, with timeout protection."""
+    try:
+        with chess.engine.SimpleEngine.popen_uci("/workspace/stockfish") as engine:
+            # Try to get the best move within 0.4 seconds, with a hard timeout of 1.0s
+            result = engine.play(board, chess.engine.Limit(time=0.4))
+            print("Best move according to Stockfish:", result.move)
+            return result.move
+    except Exception as e:
+        print("ERROR: Stockfish did not find a move.")
+        print("Exception type:", type(e).__name__)
+        print("Exception message:", str(e))
+        return None
+
 
 
 def to_square_index(file_index, rank):
@@ -7,12 +25,12 @@ def to_square_index(file_index, rank):
     rank: 1-8
     returns: square index for python-chess
     """
-    print(f"{file_index=}, {rank=}")
-    file_index = 9-int(file_index)
+    # print(f"{file_index=}, {rank=}")
+    file_index = 9-int(file_index) #9 - int() on both? 
     rank = 9-int(rank) 
     file_letter = chr(int(file_index) + 96)
     square_str = file_letter + str(int(rank))
-    print(f"{square_str=}")
+    # print(f"{square_str=}")
     return chess.parse_square(square_str)
 
 class ChessClassMapper:
@@ -45,24 +63,123 @@ class ChessClassMapper:
         if class_str not in self.mapping:
             raise KeyError(f"Unknown class string: {class_str}")
         return self.mapping[class_str]
-    def reverse_map_color_and_piece(self, color, type):
+    def reverse_map_color_and_piece(self, color, role):
         """returns Piece type string from color and type"""
-        return self.reverse_mapping[(color,type)]
+        return self.reverse_mapping[(color,role)]
 
 
-# board = chess.Board.empty()  # start with an empty board
+class PieceTracker: 
+    """Tracks the changes and number of pieces in the current board, and future board."""
+    def __init__(self):
+        self.curr_white_piece_squares = set()
+        self.curr_black_piece_squares = set()
+        self.next_white_piece_squares = set()
+        self.next_black_piece_squares = set()
+        self.candidate_board = chess.Board()
+    def update_sets(self):
+        """
+        Takes the next-move sets and makes them current move, 
+        resets next-move sets. 
+        """
+        self.curr_black_piece_squares = self.next_black_piece_squares
+        self.curr_white_piece_squares = self.next_white_piece_squares
+        self.next_white_piece_squares = set()
+        self.next_black_piece_squares = set()
+    
+    def move_start(self): 
+        """
+        Toss away all the next_piece sets, due to an error. 
+        """
+        self.next_white_piece_squares = set()
+        self.next_black_piece_squares = set()
 
-# # Place a white pawn on e2
-# board.set_piece_at(chess.E2, chess.Piece(chess.PAWN, chess.BLACK))
+    def add_square_idx_to_appropriate_set(self, color, square_index, first_move):
+        """Adds a square index to either black or white sets based on the color of the piece."""
+        if first_move: 
+            if color == chess.WHITE:
+                self.curr_white_piece_squares.add(square_index)
+            if color == chess.BLACK:
+                self.curr_black_piece_squares.add(square_index)
+        else: 
+            if color == chess.WHITE:
+                self.next_white_piece_squares.add(square_index)
+            if color == chess.BLACK:
+                self.next_black_piece_squares.add(square_index)  
 
-# # Place a black knight on g8
-# board.set_piece_at(chess.G8, chess.Piece(chess.KNIGHT, chess.BLACK))
+
+    def discern_movement_type(self) -> chess.Move:
+        ###note: missing logic for promotion, for en-passant and for castling. 
+
+        """Based on set size-comparisons, discern the move type that just occured."""
+        move = chess.Move.null()
+        black_same = False
+        white_same = False
+        # print(f"{self.curr_white_piece_squares=}, {self.next_white_piece_squares=}")
+        # print(f"{self.curr_black_piece_squares=}, {self.next_black_piece_squares=}")
+        if len(self.curr_black_piece_squares) == len(self.next_black_piece_squares):
+            black_same = True 
+        if len(self.curr_white_piece_squares) == len(self.next_white_piece_squares):
+            white_same = True 
+        if black_same and white_same:
+            if self.curr_black_piece_squares == self.next_black_piece_squares and self.curr_white_piece_squares != self.next_white_piece_squares:
+                # The pieces that changed were White's
+                try:
+                    (from_square,) = self.curr_white_piece_squares - self.next_white_piece_squares
+                    (to_square,) = self.next_white_piece_squares - self.curr_white_piece_squares
+                    move = chess.Move(from_square, to_square)
+                    print("white moved from", self.curr_white_piece_squares - self.next_white_piece_squares,
+                        "to", self.next_white_piece_squares - self.curr_white_piece_squares)
+                except ValueError:
+                    print("ERROR unpacking squares for White: invalid number of changed squares!")
+
+            elif self.curr_white_piece_squares == self.next_white_piece_squares and self.curr_black_piece_squares != self.next_black_piece_squares:
+                # The pieces that changed were Black's
+                try:
+                    (from_square,) = self.curr_black_piece_squares - self.next_black_piece_squares
+                    (to_square,) = self.next_black_piece_squares - self.curr_black_piece_squares
+                    move = chess.Move(from_square, to_square)
+                    print("black moved from", self.curr_black_piece_squares - self.next_black_piece_squares,
+                        "to", self.next_black_piece_squares - self.curr_black_piece_squares)
+                except ValueError:
+                    print("ERROR unpacking squares for Black: invalid number of changed squares!")
+            else: 
+                print("ERROR! No movement detected!")
+           
+        elif black_same and not white_same:
+            try:
+                (from_square,) = self.curr_black_piece_squares - self.next_black_piece_squares
+                (to_square,) = self.next_black_piece_squares - self.curr_black_piece_squares
+                move = chess.Move(from_square, to_square)
+                print("black ate white")
+                if to_square in self.curr_white_piece_squares:
+                    print("Confirmed: black captured a white piece at", to_square)
+            except ValueError:
+                print("ERROR unpacking squares for Black: invalid number of changed squares!")
+
+        elif white_same and not black_same:
+            try:
+                (from_square,) = self.curr_white_piece_squares - self.next_white_piece_squares
+                (to_square,) = self.next_white_piece_squares - self.curr_white_piece_squares
+                move = chess.Move(from_square, to_square)
+                print("white ate black")
+                if to_square in self.curr_black_piece_squares:
+                    print("Confirmed: white captured a black piece at", to_square)
+            except ValueError:
+                print("ERROR unpacking squares for White: invalid number of changed squares!")
+        print("=== Piece Tracker Debug ===")
+        print(f"curr_white: {self.curr_white_piece_squares}")
+        print(f"next_white: {self.next_white_piece_squares}")
+        print(f"curr_black: {self.curr_black_piece_squares}")
+        print(f"next_black: {self.next_black_piece_squares}")
+        return move 
+    
 
 
 
 class GameState():
     """ Gamestate holds the current board configuration, as well as who makes the current moves. """
     def __init__(self,manager):
+        self.tracker = PieceTracker()
         self.mapper = ChessClassMapper()
         self.board = chess.Board.empty() 
         self.board.turn = False 
@@ -70,45 +187,90 @@ class GameState():
         self.first_move = True 
         self.true_board = chess.Board()
 
-    def set_true_piece_type(self,piece, sq_index):
+    def set_true_piece_type(self,piece, sq_index)-> bool: 
         """
-        Changes Piece type to the one that should be there in Chess' starting configuration. 
+        Changes Piece type to the one that should be there in Chess' starting configuration.
+
+        returns True if worked correctly, and False if an error was encountered 
         """ 
         py_chess_piece_object = self.true_board.piece_at(sq_index) #get the pychess piece object, extract attributes for our own piece object.
-        piece.piece_type = self.mapper.reverse_map_color_and_piece(py_chess_piece_object.color,py_chess_piece_object.piece_type)
-
-    def initialize_board(self,homography):
-        """
-        Initialize_board goes over the initial detections, converts pieces to board representation and adds them to the game.
-        """
-        self.board.turn = not self.board.turn
-        if self.board.turn:
-            print("White's turn")
+        if py_chess_piece_object is None: #catch error 
+            print(f"ERROR: piece at {sq_index} at start, when one ought not to be!")
+            return False 
         else:
-            print("Black's turn")
-        self.board.clear() 
-        square_indices = [] #py-chess gives every square a number
-        validity_array = []
+            piece.piece_type = self.mapper.reverse_map_color_and_piece(py_chess_piece_object.color,py_chess_piece_object.piece_type)
+        return True 
+
+    def initialize_board(self, homography):
         locs = self.manager.get_point_locations()
-        for loc in locs: 
-            loc_number,loc_letter, validity = homography.transform_point_location_to_ideal_board(loc)
+        square_indices = []
+        validity_array = []
+
+        # Process locations once
+        for loc in locs:
+            loc_number, loc_letter, validity = homography.transform_point_location_to_ideal_board(loc)
             validity_array.append(validity)
             if validity:
-                loc_letter, loc_number = int(loc_letter),int(loc_number) 
-                #fixing the orientation
-                square_indices.append(to_square_index(loc_letter,loc_number))
-            else: 
-                square_indices.append(3) #junk value just to append something.
-        for piece,sq_index,idx in zip(self.manager.pieces,square_indices,range(len(square_indices))): 
-            if validity_array[idx] is False:
-                continue #we don't want to project invalid pieces
-            if self.first_move is True:
-                print(locs[idx],)
-                self.set_true_piece_type(piece, sq_index)
+                loc_letter, loc_number = int(loc_letter), int(loc_number)
+                square_indices.append(to_square_index(loc_letter, loc_number))
+            else:
+                square_indices.append(None)  # Use None for invalid
 
-            color, role  = self.mapper.get_color_and_piece(piece.piece_type)
-            # print(color, role)
-            self.board.set_piece_at(sq_index, chess.Piece(role, color))
-        self.manager.kill_invalid_pieces(validity_array)
-        self.first_move = False
+        if self.first_move:
+            valid_move = True 
+            print("first_move is true")
+            self.board.turn = chess.WHITE
+            self.board.clear()
+
+            # Initialize board and current sets
+            for piece, sq_index, idx in zip(self.manager.pieces, square_indices, range(len(square_indices))):
+                if validity_array[idx] is False or sq_index is None:
+                    continue
+                print(locs[idx])
+                if self.set_true_piece_type(piece, sq_index) is False: 
+                    valid_move = False 
+                color, role = self.mapper.get_color_and_piece(piece.piece_type)
+                self.tracker.add_square_idx_to_appropriate_set(
+                    color=color, square_index=sq_index, first_move=True
+                )
+                self.board.set_piece_at(sq_index, chess.Piece(role, color))
+            if valid_move is True: 
+                self.manager.kill_invalid_pieces(validity_array)
+                self.first_move = False
+            else: 
+                print("try making the first move again!")
+                self.board.turn = chess.WHITE
+                self.board.clear()
+
+        else:
+            # Subsequent moves: fill next sets (board state after move)
+            for piece, sq_index, idx in zip(self.manager.pieces, square_indices, range(len(square_indices))):
+                if validity_array[idx] is False or sq_index is None:
+                    continue
+                color, role = self.mapper.get_color_and_piece(piece.piece_type)
+                print(f"{color=}, {role=}")
+                self.tracker.add_square_idx_to_appropriate_set(
+                    color=color, square_index=sq_index, first_move=False
+                )
+
+            # Determine move from changes in sets
+            move = self.tracker.discern_movement_type()
+            if move and move != chess.Move.null():
+                if move in self.board.legal_moves:
+                    self.board.push(move)
+                    self.tracker.update_sets()
+                    self.manager.kill_invalid_pieces(validity_array)
+                    Stockfish_advice(board=self.board)
+                else:
+                    print("ERROR: Illegal move attempted. try again ")
+                    self.tracker.move_start()
+                    print(f"ILLEGAL MOVE: {move=}")
+            else: 
+                print(move)
+                print("move unregistered. Try again.")
+                self.tracker.move_start()
+
+
+
+
         print(self.board)

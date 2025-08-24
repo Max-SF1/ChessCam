@@ -20,13 +20,13 @@ from utils.supporting_structs import Piece, PieceManager, Homography, get_piece_
 
 
 # ############################ LOAD MODEL AND EXPORT WITH TENSORRT ###############
-# model = YOLO("/workspace/src/scripts/runs/detect/train5/weights/best.pt")
+model = YOLO("/workspace/src/scripts/runs/detect/train10/weights/best.pt")
 # model.export(format="engine",
 #              imgsz = 1280,
 #              data= "/workspace/src/scripts/datasets/Scacchi-MachineLearning-YoloV5-2/data.yaml") 
 # ##############################################################################
 
-tensorrt_model = YOLO("/workspace/src/scripts/runs/detect/train5/weights/best.engine")
+tensorrt_model = model #YOLO("/workspace/src/scripts/runs/detect/train10/weights/best.engine")
 
 # ############ DEBUG: CHECK LOADED AND EXPORTED MODEL CLASSES: ###################
 # # print(model.names)
@@ -128,8 +128,6 @@ try:
 
                 cv2.rectangle(annotated_frame, top_left, bottom_right, color=(0, 255, 0), thickness=2)        
             
-
-
                 
         cv2.namedWindow("YOLOv11 Online Inference")
         cv2.imshow("YOLOv11 Online Inference", annotated_frame)   
