@@ -8,8 +8,6 @@ from utils import chess_supporting_structs
 #corners given by cv2's find corners are ordered row by row, left to right in every row. 
 #matching_corners should be ordered the same way.
 
-import numpy as np
-
 
 class Probation:
     """
@@ -121,6 +119,7 @@ class Homography:
     def check_initialization(self):
         """returns True if the Homography matrix has been computed, and false otherwise."""
         return self.initialized
+    
     def compute_homography(self,corners):
         """Computes the matrix H using cv2's FindHomography, given the corners found by FindChessboardCorners."""
         # cv2.drawChessboardCorners(frame, (7,7), corners, ret)
@@ -240,9 +239,11 @@ class PieceManager():
     def append_piece(self,piece):
         self.pieces.append(piece)
         self.piece_scores.append(0)
+
     def time_update(self):
         for piece in self.pieces:
             piece.time_update()
+
     def display_active_pieces(self):
         if not self.pieces:
             print("manager does not handle any pieces.")
