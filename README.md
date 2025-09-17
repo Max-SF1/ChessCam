@@ -11,7 +11,7 @@
 # ChessCam! using YOLO11 on a physical game to generate realtime move suggestions! 
 
 ## [Watch the demo on YouTube](https://www.youtube.com/watch?v=ubye3jiIMzM)
-Additonally, you can see our system handling **[Captures, and Illegal Moves](youtube.com/watch?v=eKCE8y1vlIw&feature=youtu.be)**, complex moves like **[En-Passant](youtube.com/watch?v=eKCE8y1vlIw&feature=youtu.be)**, and **[Error Recovery](https://www.youtube.com/watch?v=qV9FdVCifS0)**! 
+Additonally, you can see our system handling **[Captures, and Illegal Moves](youtube.com/watch?v=eKCE8y1vlIw&feature=youtu.be)**, complex moves like **[En-Passant](youtube.com/watch?v=eKCE8y1vlIw&feature=youtu.be)**, and **[Error Recovery](https://www.youtube.com/watch?v=qV9FdVCifS0)**! You can read more about the development process in **ChessCam_Project_Report.pdf**, or see our **poster**.
 
 (Full disclosure: our system does not handle moves like castling or promotion, since the project had limited scope). 
 
@@ -40,7 +40,7 @@ A homography is a linear transformation that maps between two planes, and we can
 And you can **[Watch the Following Animation](https://youtu.be/ZMWNphRdz5o)** to see how we compute the Homography using OpenCV's `findChessBoardCorners`, (we then sort them to row major to map to a planar board's corners), and use the computed homography to map pieces to their correct squares. 
 
 ### Major File Overview: 
-
+You can read more about the development process in **ChessCam_Project_Report.pdf**, or see our **poster**.
 | File                          | Description                                                                                           |
 |-------------------------------|-------------------------------------------------------------------------------------------------------|
 | **src/scripts/online_inference.py**                | Main file for preforming the inference of chess position, and tracking |
@@ -50,7 +50,6 @@ And you can **[Watch the Following Animation](https://youtu.be/ZMWNphRdz5o)** to
 | **src/scripts/utils/chess_supporting_structs.py** | Supporting structures for chess logic, interfacing with stockfish and move inference.                             |
 |**src/Dockerfile** and **src/Docker-compose.yaml**| set up the image and container for the development environment|
 
-You can read more about the development process in **ChessCam_Project_Report.pdf**
 ## Setup
 
 We want to work in an environment that has both git, github, VSCode, and Docker.
