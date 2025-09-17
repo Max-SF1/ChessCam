@@ -12,7 +12,7 @@
 
 ## [Watch the demo on YouTube](https://www.youtube.com/watch?v=ubye3jiIMzM) 
 
-Additionally, you can see our system handling [**Captures, and Illegal Moves**](https://www.youtube.com/watch?v=eKCE8y1vlIw&feature=youtu.be), complex moves like **[En-Passant](https://www.youtube.com/watch?v=eKCE8y1vlIw&feature=youtu.be)**, and **[Error Recovery](https://www.youtube.com/watch?v=qV9FdVCifS0)**! 
+Additionally, you can see our system handling [**Captures, and Illegal Moves**](https://www.youtube.com/watch?v=eKCE8y1vlIw&feature=youtu.be), complex moves like **[En-Passant](https://www.youtube.com/watch?v=2sT8WWDWMfo)**, and **[Error Recovery](https://www.youtube.com/watch?v=qV9FdVCifS0)**! 
 
 You can read more about the development process in **ChessCam_Project_Report.pdf**, or see our **poster**.
 
