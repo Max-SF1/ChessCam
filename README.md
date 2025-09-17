@@ -10,8 +10,11 @@
 
 # ChessCam! using YOLO11 on a physical game to generate realtime move suggestions! 
 
-## [Watch the demo on YouTube](https://www.youtube.com/watch?v=ubye3jiIMzM)
-Additonally, you can see our system handling **[Captures, and Illegal Moves](youtube.com/watch?v=eKCE8y1vlIw&feature=youtu.be)**, complex moves like **[En-Passant](youtube.com/watch?v=eKCE8y1vlIw&feature=youtu.be)**, and **[Error Recovery](https://www.youtube.com/watch?v=qV9FdVCifS0)**! You can read more about the development process in **ChessCam_Project_Report.pdf**, or see our **poster**.
+## [Watch the demo on YouTube](https://www.youtube.com/watch?v=ubye3jiIMzM) 
+
+Additionally, you can see our system handling [**Captures, and Illegal Moves**](https://www.youtube.com/watch?v=eKCE8y1vlIw&feature=youtu.be), complex moves like **[En-Passant](https://www.youtube.com/watch?v=eKCE8y1vlIw&feature=youtu.be)**, and **[Error Recovery](https://www.youtube.com/watch?v=qV9FdVCifS0)**! 
+
+You can read more about the development process in **ChessCam_Project_Report.pdf**, or see our **poster**.
 
 (Full disclosure: our system does not handle moves like castling or promotion, since the project had limited scope). 
 
