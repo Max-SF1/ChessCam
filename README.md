@@ -50,7 +50,7 @@ And you can **[Watch the Following Animation](https://youtu.be/ZMWNphRdz5o)** to
 | **src/scripts/utils/chess_supporting_structs.py** | Supporting structures for chess logic, interfacing with stockfish and move inference.                             |
 |**src/Dockerfile** and **src/Docker-compose.yaml**| set up the image and container for the development environment|
 
-You can read more about the development process in 
+You can read more about the development process in **ChessCam_Project_Report.pdf**
 ## Setup
 
 We want to work in an environment that has both git, github, VSCode, and Docker.
